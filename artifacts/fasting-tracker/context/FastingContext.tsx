@@ -1,5 +1,4 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Notifications from "expo-notifications";
 import React, {
   createContext,
   useCallback,
@@ -8,7 +7,6 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Platform } from "react-native";
 
 export interface FastRecord {
   id: string;
@@ -36,6 +34,7 @@ interface FastingContextValue {
   startFast: (targetHours: number) => Promise<void>;
   endFast: () => Promise<void>;
   addIntake: (type: "water" | "fat", amount: number) => Promise<void>;
+  subtractIntake: (type: "water" | "fat", amount: number) => Promise<void>;
   getIntakesForFast: (fastId: string) => IntakeRecord[];
 }
 
@@ -57,51 +56,6 @@ function getElapsedMillis(fast: FastRecord): number {
   return Math.max(0, wallElapsed);
 }
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
-
-async function scheduleGoalNotification(fast: FastRecord): Promise<void> {
-  if (Platform.OS === "web") return;
-  try {
-    const { status } = await Notifications.requestPermissionsAsync();
-    if (status !== "granted") return;
-
-    await Notifications.cancelAllScheduledNotificationsAsync();
-
-    const delaySeconds = Math.max(
-      0,
-      Math.floor((fast.plannedEndTime - Date.now()) / 1000)
-    );
-    if (delaySeconds <= 0) return;
-
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: "Fasting Goal Reached!",
-        body: `You've completed your ${fast.targetDurationHours}-hour fast. Amazing work!`,
-        sound: true,
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-        seconds: delaySeconds,
-      },
-    });
-  } catch {
-  }
-}
-
-async function cancelGoalNotification(): Promise<void> {
-  if (Platform.OS === "web") return;
-  try {
-    await Notifications.cancelAllScheduledNotificationsAsync();
-  } catch {
-  }
-}
 
 export function FastingProvider({ children }: { children: React.ReactNode }) {
   const [activeFast, setActiveFast] = useState<FastRecord | null>(null);
@@ -158,7 +112,6 @@ export function FastingProvider({ children }: { children: React.ReactNode }) {
     };
     await AsyncStorage.setItem(STORAGE_KEYS.ACTIVE_FAST, JSON.stringify(fast));
     setActiveFast(fast);
-    await scheduleGoalNotification(fast);
   }, []);
 
   const endFast = useCallback(async () => {
@@ -173,7 +126,6 @@ export function FastingProvider({ children }: { children: React.ReactNode }) {
 
     await AsyncStorage.removeItem(STORAGE_KEYS.ACTIVE_FAST);
     setActiveFast(null);
-    await cancelGoalNotification();
   }, [activeFast]);
 
   const addIntake = useCallback(
@@ -188,10 +140,26 @@ export function FastingProvider({ children }: { children: React.ReactNode }) {
       };
       setIntakeRecords((prev) => {
         const updated = [...prev, record];
-        AsyncStorage.setItem(
-          STORAGE_KEYS.INTAKE_RECORDS,
-          JSON.stringify(updated)
-        );
+        AsyncStorage.setItem(STORAGE_KEYS.INTAKE_RECORDS, JSON.stringify(updated));
+        return updated;
+      });
+    },
+    [activeFast]
+  );
+
+  const subtractIntake = useCallback(
+    async (type: "water" | "fat", amount: number) => {
+      if (!activeFast) return;
+      const record: IntakeRecord = {
+        id: genId(),
+        fastId: activeFast.id,
+        type,
+        amount: -amount,
+        timestamp: Date.now(),
+      };
+      setIntakeRecords((prev) => {
+        const updated = [...prev, record];
+        AsyncStorage.setItem(STORAGE_KEYS.INTAKE_RECORDS, JSON.stringify(updated));
         return updated;
       });
     },
@@ -214,6 +182,7 @@ export function FastingProvider({ children }: { children: React.ReactNode }) {
         startFast,
         endFast,
         addIntake,
+        subtractIntake,
         getIntakesForFast,
       }}
     >
