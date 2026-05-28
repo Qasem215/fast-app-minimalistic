@@ -47,7 +47,9 @@ export function GoalInputModal({ visible, onClose, onStart }: Props) {
   };
 
   const handleStart = () => {
-    const total = useCustom ? customTotalHours() : selected;
+    const raw = useCustom ? customTotalHours() : selected;
+    // Round to nearest minute (1/60 of an hour) to avoid long decimals
+    const total = Math.round(raw * 60) / 60;
     if (!total || total <= 0 || total > 240) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     onStart(total);

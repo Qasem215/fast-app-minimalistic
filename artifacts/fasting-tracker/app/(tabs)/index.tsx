@@ -20,6 +20,18 @@ import { IntakeInput } from "@/components/IntakeInput";
 import { GoalInputModal } from "@/components/GoalInputModal";
 import { EndFastModal } from "@/components/EndFastModal";
 
+function formatGoal(hours: number): string {
+  const totalMinutes = Math.round(hours * 60);
+  const d = Math.floor(totalMinutes / (60 * 24));
+  const h = Math.floor((totalMinutes % (60 * 24)) / 60);
+  const m = totalMinutes % 60;
+  const parts: string[] = [];
+  if (d > 0) parts.push(`${d}d`);
+  if (h > 0) parts.push(`${h}h`);
+  if (m > 0) parts.push(`${m}m`);
+  return parts.join(" ") || "0h";
+}
+
 export default function TimerScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -91,7 +103,7 @@ export default function TimerScreen() {
           {activeFast && (
             <View style={styles.goalRow}>
               <Text style={[styles.goalLabel, { color: colors.mutedForeground }]}>
-                Goal: {activeFast.targetDurationHours}h
+                Goal: {formatGoal(activeFast.targetDurationHours)}
               </Text>
               <Text style={[styles.goalLabel, { color: colors.mutedForeground }]}>
                 {Math.round(progress * 100)}%
