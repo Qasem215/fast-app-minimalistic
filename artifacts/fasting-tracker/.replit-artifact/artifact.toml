@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/"
+title = "Fasting Tracker"
+version = "1.0.0"
+id = "artifacts/fasting-tracker"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/" ]
+localPort = 19957
+
+[services.development]
+run = "pnpm --filter @workspace/fasting-tracker run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/fasting-tracker", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/fasting-tracker", "run", "serve" ]
+
+[services.env]
+PORT = "19957"
+BASE_PATH = "/"
