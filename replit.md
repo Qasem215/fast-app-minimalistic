@@ -34,7 +34,7 @@ _Describe the high-level user-facing capabilities of this app once they exist._
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- **Never remove features or code silently.** Always explain what is being removed and why before doing it, so the user can approve. This app may go to production directly.
 
 ## Gotchas
 
