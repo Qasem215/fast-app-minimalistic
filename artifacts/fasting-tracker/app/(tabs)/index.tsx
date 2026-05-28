@@ -102,20 +102,18 @@ export default function TimerScreen() {
 
         {activeFast ? (
           <View style={styles.activeActions}>
-            <View style={styles.intakeRow}>
-              <IntakeInput
-                type="water"
-                totalGrams={waterGrams}
-                onAdd={(g) => addIntake("water", g)}
-                onSubtract={(g) => subtractIntake("water", g)}
-              />
-              <IntakeInput
-                type="fat"
-                totalGrams={fatGrams}
-                onAdd={(g) => addIntake("fat", g)}
-                onSubtract={(g) => subtractIntake("fat", g)}
-              />
-            </View>
+            <IntakeInput
+              type="water"
+              totalGrams={waterGrams}
+              onAdd={(g) => addIntake("water", g)}
+              onSubtract={(g) => subtractIntake("water", g)}
+            />
+            <IntakeInput
+              type="fat"
+              totalGrams={fatGrams}
+              onAdd={(g) => addIntake("fat", g)}
+              onSubtract={(g) => subtractIntake("fat", g)}
+            />
 
             <TouchableOpacity
               onPress={() => {

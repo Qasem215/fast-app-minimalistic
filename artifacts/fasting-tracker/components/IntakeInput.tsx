@@ -102,7 +102,6 @@ export function IntakeInput({ type, totalGrams, onAdd, onSubtract }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    flex: 1,
     borderRadius: 14,
     borderWidth: 1,
     padding: 12,
