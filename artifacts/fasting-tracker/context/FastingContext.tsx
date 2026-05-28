@@ -31,8 +31,10 @@ interface FastingContextValue {
   intakeRecords: IntakeRecord[];
   elapsedMs: number;
   isLoading: boolean;
-  startFast: (targetHours: number) => Promise<void>;
+  startFast: (targetHours: number, startTime?: number) => Promise<void>;
   endFast: () => Promise<void>;
+  logFast: (startTime: number, endTime: number, targetHours: number) => Promise<void>;
+  deleteFast: (fastId: string) => Promise<void>;
   addIntake: (type: "water" | "fat", amount: number) => Promise<void>;
   subtractIntake: (type: "water" | "fat", amount: number) => Promise<void>;
   getIntakesForFast: (fastId: string) => IntakeRecord[];
@@ -52,10 +54,8 @@ function genId(): string {
 
 function getElapsedMillis(fast: FastRecord): number {
   const now = Date.now();
-  const wallElapsed = now - fast.startWallTime;
-  return Math.max(0, wallElapsed);
+  return Math.max(0, now - fast.startWallTime);
 }
-
 
 export function FastingProvider({ children }: { children: React.ReactNode }) {
   const [activeFast, setActiveFast] = useState<FastRecord | null>(null);
@@ -65,9 +65,7 @@ export function FastingProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   useEffect(() => {
     if (tickerRef.current) clearInterval(tickerRef.current);
@@ -79,9 +77,7 @@ export function FastingProvider({ children }: { children: React.ReactNode }) {
     } else {
       setElapsedMs(0);
     }
-    return () => {
-      if (tickerRef.current) clearInterval(tickerRef.current);
-    };
+    return () => { if (tickerRef.current) clearInterval(tickerRef.current); };
   }, [activeFast]);
 
   const loadData = async () => {
@@ -91,7 +87,6 @@ export function FastingProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.getItem(STORAGE_KEYS.FAST_HISTORY),
         AsyncStorage.getItem(STORAGE_KEYS.INTAKE_RECORDS),
       ]);
-
       if (activeFastStr) setActiveFast(JSON.parse(activeFastStr));
       if (historyStr) setFastHistory(JSON.parse(historyStr));
       if (intakeStr) setIntakeRecords(JSON.parse(intakeStr));
@@ -100,13 +95,13 @@ export function FastingProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const startFast = useCallback(async (targetHours: number) => {
-    const now = Date.now();
+  const startFast = useCallback(async (targetHours: number, startTime?: number) => {
+    const start = startTime ?? Date.now();
     const fast: FastRecord = {
       id: genId(),
-      startWallTime: now,
-      startBootReference: now,
-      plannedEndTime: now + targetHours * 60 * 60 * 1000,
+      startWallTime: start,
+      startBootReference: start,
+      plannedEndTime: start + targetHours * 60 * 60 * 1000,
       actualEndTime: null,
       targetDurationHours: targetHours,
     };
@@ -117,16 +112,43 @@ export function FastingProvider({ children }: { children: React.ReactNode }) {
   const endFast = useCallback(async () => {
     if (!activeFast) return;
     const ended: FastRecord = { ...activeFast, actualEndTime: Date.now() };
-
     setFastHistory((prev) => {
       const updated = [ended, ...prev];
       AsyncStorage.setItem(STORAGE_KEYS.FAST_HISTORY, JSON.stringify(updated));
       return updated;
     });
-
     await AsyncStorage.removeItem(STORAGE_KEYS.ACTIVE_FAST);
     setActiveFast(null);
   }, [activeFast]);
+
+  const logFast = useCallback(async (startTime: number, endTime: number, targetHours: number) => {
+    const fast: FastRecord = {
+      id: genId(),
+      startWallTime: startTime,
+      startBootReference: startTime,
+      plannedEndTime: startTime + targetHours * 60 * 60 * 1000,
+      actualEndTime: endTime,
+      targetDurationHours: targetHours,
+    };
+    setFastHistory((prev) => {
+      const updated = [fast, ...prev].sort((a, b) => b.startWallTime - a.startWallTime);
+      AsyncStorage.setItem(STORAGE_KEYS.FAST_HISTORY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const deleteFast = useCallback(async (fastId: string) => {
+    setFastHistory((prev) => {
+      const updated = prev.filter((f) => f.id !== fastId);
+      AsyncStorage.setItem(STORAGE_KEYS.FAST_HISTORY, JSON.stringify(updated));
+      return updated;
+    });
+    setIntakeRecords((prev) => {
+      const updated = prev.filter((r) => r.fastId !== fastId);
+      AsyncStorage.setItem(STORAGE_KEYS.INTAKE_RECORDS, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
 
   const addIntake = useCallback(
     async (type: "water" | "fat", amount: number) => {
@@ -181,6 +203,8 @@ export function FastingProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         startFast,
         endFast,
+        logFast,
+        deleteFast,
         addIntake,
         subtractIntake,
         getIntakesForFast,

@@ -164,7 +164,7 @@ export default function TimerScreen() {
       <GoalInputModal
         visible={showStart}
         onClose={() => setShowStart(false)}
-        onStart={startFast}
+        onStart={(targetHours, startTime) => startFast(targetHours, startTime)}
       />
       <EndFastModal
         visible={showEnd}
