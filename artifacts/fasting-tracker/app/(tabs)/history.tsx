@@ -10,11 +10,23 @@ import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
-import { useFasting, FastRecord } from "@/context/FastingContext";
+import { useFasting, FastRecord, IntakeRecord } from "@/context/FastingContext";
 
 function formatDate(ts: number): string {
   const d = new Date(ts);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function formatGoal(hours: number): string {
+  const totalMinutes = Math.round(hours * 60);
+  const d = Math.floor(totalMinutes / (60 * 24));
+  const h = Math.floor((totalMinutes % (60 * 24)) / 60);
+  const m = totalMinutes % 60;
+  const parts: string[] = [];
+  if (d > 0) parts.push(`${d}d`);
+  if (h > 0) parts.push(`${h}h`);
+  if (m > 0) parts.push(`${m}m`);
+  return parts.join(" ") || "0h";
 }
 
 function formatDuration(ms: number): string {
@@ -82,11 +94,21 @@ function BarChart({ fasts }: { fasts: FastRecord[] }) {
   );
 }
 
-function FastRow({ fast }: { fast: FastRecord }) {
+function FastRow({ fast, intakes }: { fast: FastRecord; intakes: IntakeRecord[] }) {
   const colors = useColors();
   const durationMs = getActualDurationMs(fast);
   const goalMet = durationMs >= fast.targetDurationHours * 3600000;
   const pct = Math.min(100, Math.round((durationMs / (fast.targetDurationHours * 3600000)) * 100));
+
+  const waterGrams = intakes
+    .filter((i) => i.type === "water")
+    .reduce((sum, i) => sum + i.amount, 0);
+  const fatGrams = intakes
+    .filter((i) => i.type === "fat")
+    .reduce((sum, i) => sum + i.amount, 0);
+
+  const formatGrams = (g: number) =>
+    g % 1 === 0 ? `${g}g` : `${g.toFixed(1)}g`;
 
   return (
     <View style={[styles.row, { backgroundColor: colors.card }]}>
@@ -102,7 +124,7 @@ function FastRow({ fast }: { fast: FastRecord }) {
           {formatDate(fast.startWallTime)}
         </Text>
         <Text style={[styles.rowSub, { color: colors.mutedForeground }]}>
-          Goal: {fast.targetDurationHours}h · Fasted: {formatDuration(durationMs)}
+          Goal: {formatGoal(fast.targetDurationHours)} · Fasted: {formatDuration(durationMs)}
         </Text>
         <View style={[styles.progressBar, { backgroundColor: colors.secondary }]}>
           <View
@@ -111,6 +133,20 @@ function FastRow({ fast }: { fast: FastRecord }) {
               { width: `${pct}%` as any, backgroundColor: goalMet ? colors.primary : colors.water },
             ]}
           />
+        </View>
+        <View style={styles.intakePills}>
+          <View style={[styles.pill, { backgroundColor: colors.water + "20" }]}>
+            <Feather name="droplet" size={11} color={colors.water} />
+            <Text style={[styles.pillText, { color: colors.water }]}>
+              {formatGrams(Math.max(0, waterGrams))}
+            </Text>
+          </View>
+          <View style={[styles.pill, { backgroundColor: colors.fat + "20" }]}>
+            <Feather name="zap" size={11} color={colors.fat} />
+            <Text style={[styles.pillText, { color: colors.fat }]}>
+              {formatGrams(Math.max(0, fatGrams))}
+            </Text>
+          </View>
         </View>
       </View>
       <Text style={[styles.pct, { color: goalMet ? colors.primary : colors.mutedForeground }]}>
@@ -123,7 +159,7 @@ function FastRow({ fast }: { fast: FastRecord }) {
 export default function HistoryScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { fastHistory } = useFasting();
+  const { fastHistory, getIntakesForFast } = useFasting();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
@@ -153,7 +189,7 @@ export default function HistoryScreen() {
             <BarChart fasts={fastHistory} />
             <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>All Fasts</Text>
             {fastHistory.map((fast) => (
-              <FastRow key={fast.id} fast={fast} />
+              <FastRow key={fast.id} fast={fast} intakes={getIntakesForFast(fast.id)} />
             ))}
           </>
         )}
@@ -290,6 +326,23 @@ const styles = StyleSheet.create({
   pct: {
     fontSize: 14,
     fontFamily: "Inter_700Bold",
+  },
+  intakePills: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 6,
+  },
+  pill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 20,
+  },
+  pillText: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
   },
   empty: {
     alignItems: "center",
