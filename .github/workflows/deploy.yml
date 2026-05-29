@@ -34,7 +34,7 @@ jobs:
 
       - name: Export Expo web (static)
         working-directory: artifacts/fasting-tracker
-        run: pnpm exec expo export -p web --output-dir dist
+        run: pnpm exec expo export -p web --output-dir dist --base-url /fast-app-minimalistic
         env:
           NODE_ENV: production
 
