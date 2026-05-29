@@ -25,13 +25,21 @@
       "package": "com.fasting.tracker"
     },
     "web": {
-      "favicon": "./assets/images/icon.png"
+      "favicon": "./assets/images/icon.png",
+      "output": "static",
+      "bundler": "metro",
+      "name": "Fast — Fasting Tracker",
+      "shortName": "Fast",
+      "description": "A minimalist fasting tracker. Track fasts, log intake, and review history.",
+      "themeColor": "#09090F",
+      "backgroundColor": "#09090F"
     },
     "plugins": [
       [
         "expo-router",
         {
-          "origin": "https://replit.com/"
+          "origin": "https://replit.com/",
+          "baseUrl": "/fast-app-minimalistic"
         }
       ],
       "expo-font",
