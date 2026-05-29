@@ -31,6 +31,8 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install
+        env:
+          npm_config_user_agent: pnpm
 
       - name: Export Expo web (static)
         working-directory: artifacts/fasting-tracker
